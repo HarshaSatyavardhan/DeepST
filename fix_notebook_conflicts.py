@@ -5,7 +5,6 @@ Keeps the "Stashed changes" version which contains the actual code
 """
 
 import json
-import sys
 
 def fix_notebook_conflicts(input_file, output_file):
     """

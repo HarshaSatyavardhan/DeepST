@@ -124,12 +124,8 @@ class DeepST_model(nn.Module):
         """Build graph convolutional layers based on specified type"""
         conv_class = self._get_conv_class()
 
-        # For GATConv, enable attention weights; for others, use standard initialization
-        if self.Conv_type == 'GATConv':
-            self.conv1 = conv_class(self.linear_encoder_hidden[-1], self.conv_hidden[0]*2, return_attention_weights=True)
-        else:
-            self.conv1 = conv_class(self.linear_encoder_hidden[-1], self.conv_hidden[0]*2)
-
+        # Initialize conv layer (same for all types)
+        self.conv1 = conv_class(self.linear_encoder_hidden[-1], self.conv_hidden[0]*2)
         self.bn1 = BatchNorm(self.conv_hidden[0]*2)
         self.relu1 = nn.ReLU(inplace=True)
 
@@ -200,8 +196,8 @@ class DeepST_model(nn.Module):
         if self.Conv_type == 'GATConv':
             # Convert sparsetensor to edge index for GATconv
             edge_index, _ = adj.to_edge_index()
-            # Manually call layers to capture attention
-            conv_x, attention_tuple = self.conv1(feat_x, edge_index)
+            # Manually call layers to capture attention with return_attention_weights parameter
+            conv_x, attention_tuple = self.conv1(feat_x, edge_index, return_attention_weights=True)
             conv_x = self.bn1(conv_x)
             conv_x = self.relu1(conv_x)
         else:
