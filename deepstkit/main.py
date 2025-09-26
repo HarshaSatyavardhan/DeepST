@@ -395,7 +395,7 @@ class run():
         mse_weight: float = 1,
         bce_kld_weight: float = 1,
         domain_weight: float = 1
-    ) -> np.ndarray:
+    ) -> tuple:
         """
         Run DeepST model training
         
@@ -432,8 +432,9 @@ class run():
             
         Returns:
         --------
-        np.ndarray
-            DeepST embeddings [n_spots, n_features]
+        tuple:
+            - embeddings: DeepST embeddings [n_spots, n_features]
+            - attention_data: Captured attention weights from the GAT layer
         """
         print("Running DeepST analysis...")
         start_time = time.time()
@@ -482,7 +483,7 @@ class run():
         
         # Run training
         trainer.fit()
-        embeddings, _ = trainer.process()
+        embeddings, _, attention_data = trainer.process()
         
         # Print stats
         mem_usage = psutil.Process(os.getpid()).memory_info().rss / 1024**3
@@ -492,7 +493,7 @@ class run():
         print(f"Total time: {total_time:.2f} minutes")
         print("Analysis completed successfully")
         
-        return embeddings
+        return embeddings, attention_data
 
     def _get_cluster_data(
         self,

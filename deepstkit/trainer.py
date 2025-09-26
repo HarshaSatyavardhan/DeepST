@@ -131,10 +131,10 @@ class train():
                 self.optimizer.zero_grad()
                 
                 if self.domains is None:
-                    z, mu, logvar, de_feat, _, _, _ = self.model(inputs_corr, self.adj)
+                    z, mu, logvar, de_feat, _, _, _, _ = self.model(inputs_corr, self.adj)
                     preds = self.model.dc(z)
                 else:
-                    z, mu, logvar, de_feat, _, _, _, domain_pred = self.model(inputs_corr, self.adj)
+                    z, mu, logvar, de_feat, _, _, _, domain_pred, _ = self.model(inputs_corr, self.adj)
                     preds = self.model.model.dc(z)
                 
                 # Compute loss
@@ -171,19 +171,34 @@ class train():
         
         Returns:
         --------
-        tuple: (z, q)
+        tuple: (z, q, attention_data)
             z : np.ndarray
                 Latent representation [n_spots, n_features]
             q : np.ndarray
                 Soft cluster assignments [n_spots, n_clusters]
+            attention_data : tuple
+                Tuple containing cpu-bound edge_index and attention scores
         """
         self.model.eval()
+        attention_tuple = (None, None)
+        # The model now returns an extra value, the attention_tuple
         if self.domains is None:
-            z, _, _, _, q, _, _ = self.model(self.data, self.adj)
+            # z, mu, logvar, de_feat, q, feat_x, gnn_z, attention_tuple
+            z, _, _, _, q, _, _, attention_tuple = self.model(self.data, self.adj)
         else:
-            z, _, _, _, q, _, _, _ = self.model(self.data, self.adj)
+            # z, mu, logvar, de_feat, q, feat_x, gnn_z, domain_pred, attention_tuple
+            z, _, _, _, q, _, _, _, attention_tuple = self.model(self.data, self.adj)
+
+        # Detach tensors and move to CPU for use with numpy/matplotlib
+        edge_index, attention_scores = attention_tuple
+        if edge_index is not None and attention_scores is not None:
+            edge_index_cpu = edge_index.detach().cpu()
+            attention_scores_cpu = attention_scores.detach().cpu()
+            attention_data = (edge_index_cpu, attention_scores_cpu)
+        else:
+            attention_data = (None, None)
             
-        return z.cpu().numpy(), q.cpu().numpy()
+        return z.cpu().numpy(), q.cpu().numpy(), attention_data
 
     def save_model(self, save_path: str) -> None:
         """
@@ -237,7 +252,7 @@ class train():
         # Pretrain if specified
         if pretrain:
             self.pretrain()
-            pre_z, _ = self.process()
+            pre_z, _, _ = self.process()
             
         # Initialize cluster centers
         y_pred_last = self._initialize_clusters(pre_z, cluster_n, cluster_type, resolution)
@@ -250,7 +265,7 @@ class train():
             for epoch in range(self.epochs):
                 # Update target distribution periodically
                 if epoch % self.q_stride == 0:
-                    _, q = self.process()
+                    _, q, _ = self.process()
                     q = self.model.target_distribution(torch.Tensor(q).to(self.device))
                     y_pred = q.cpu().numpy().argmax(1)
                     
@@ -268,7 +283,7 @@ class train():
                 pbar.update(1)
         
         # Return final cluster assignments
-        _, q = self.process()
+        _, q, _ = self.process()
         return q.argmax(1)
 
     def _train_step(self, q: torch.Tensor) -> None:
@@ -278,10 +293,10 @@ class train():
         
         # Forward pass
         if self.domains is None:
-            z, mu, logvar, de_feat, out_q, _, _ = self.model(self.data, self.adj)
+            z, mu, logvar, de_feat, out_q, _, _, _ = self.model(self.data, self.adj)
             preds = self.model.dc(z)
         else:
-            z, mu, logvar, de_feat, out_q, _, _, domain_pred = self.model(self.data, self.adj)
+            z, mu, logvar, de_feat, out_q, _, _, domain_pred, _ = self.model(self.data, self.adj)
             preds = self.model.model.dc(z)
         
         # Compute losses

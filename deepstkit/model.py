@@ -123,14 +123,16 @@ class DeepST_model(nn.Module):
     def _build_graph_conv_layers(self):
         """Build graph convolutional layers based on specified type"""
         conv_class = self._get_conv_class()
-        
-        # Shared initial graph convolution
-        self.conv = Sequential('x, edge_index', [
-            (conv_class(self.linear_encoder_hidden[-1], self.conv_hidden[0]*2), 
-            'x, edge_index -> x'),
-            BatchNorm(self.conv_hidden[0]*2),
-            nn.ReLU(inplace=True), 
-        ])
+
+        # For GATConv, enable attention weights; for others, use standard initialization
+        if self.Conv_type == 'GATConv':
+            self.conv1 = conv_class(self.linear_encoder_hidden[-1], self.conv_hidden[0]*2, return_attention_weights=True)
+        else:
+            self.conv1 = conv_class(self.linear_encoder_hidden[-1], self.conv_hidden[0]*2)
+
+        self.bn1 = BatchNorm(self.conv_hidden[0]*2)
+        self.relu1 = nn.ReLU(inplace=True)
+
         
         # Mean and logvar branches
         self.conv_mean = Sequential('x, edge_index', [
@@ -182,18 +184,37 @@ class DeepST_model(nn.Module):
             
         Returns:
         --------
-        tuple: (mu, logvar, feat_x)
+        tuple: (mu, logvar, feat_x, attention_tuple)
             mu : torch.Tensor
                 Mean of latent distribution [n_nodes, conv_hidden[-1]]
             logvar : torch.Tensor
                 Log variance of latent distribution [n_nodes, conv_hidden[-1]]
             feat_x : torch.Tensor
                 Encoded features [n_nodes, linear_encoder_hidden[-1]]
+            attention_tuple : tuple
+                Tuple containing edge_index and attention scores from GAT
         """
         feat_x = self.encoder(x)
-        conv_x = self.conv(feat_x, adj)
-        return self.conv_mean(conv_x, adj), self.conv_logvar(conv_x, adj), feat_x
 
+        # Handle attention weights only for GATConv
+        if self.Conv_type == 'GATConv':
+            # Convert sparsetensor to edge index for GATconv
+            edge_index, _ = adj.to_edge_index()
+            # Manually call layers to capture attention
+            conv_x, attention_tuple = self.conv1(feat_x, edge_index)
+            conv_x = self.bn1(conv_x)
+            conv_x = self.relu1(conv_x)
+        else:
+            # For non-GAT convolutions, no attention weights
+            edge_index, _ = adj.to_edge_index()
+            conv_x = self.conv1(feat_x, edge_index)
+            conv_x = self.bn1(conv_x)
+            conv_x = self.relu1(conv_x)
+            attention_tuple = (None, None)
+
+        mu = self.conv_mean(conv_x, adj)
+        logvar = self.conv_logvar(conv_x, adj)
+        return mu, logvar, feat_x, attention_tuple
     def reparameterize(self, mu: torch.Tensor, logvar: torch.Tensor) -> torch.Tensor:
         """
         Reparameterization trick for sampling from latent distribution
@@ -304,7 +325,7 @@ class DeepST_model(nn.Module):
             
         Returns:
         --------
-        tuple: (z, mu, logvar, de_feat, q, feat_x, gnn_z)
+        tuple: (z, mu, logvar, de_feat, q, feat_x, gnn_z, attention_tuple)
             z : torch.Tensor
                 Combined latent features [n_nodes, linear_encoder_hidden[-1] + conv_hidden[-1]]
             mu : torch.Tensor
@@ -319,8 +340,11 @@ class DeepST_model(nn.Module):
                 Encoded features [n_nodes, linear_encoder_hidden[-1]]
             gnn_z : torch.Tensor
                 Graph latent features [n_nodes, conv_hidden[-1]]
+            attention_tuple : tuple
+                attention weights from the GAT layer
         """
-        mu, logvar, feat_x = self.encode(x, adj)
+        # mu, logvar, feat_x = self.encode(x, adj)
+        mu, logvar, feat_x, attention_tuple = self.encode(x, adj)
         gnn_z = self.reparameterize(mu, logvar)
         z = torch.cat((feat_x, gnn_z), 1)
         de_feat = self.decoder(z)
@@ -330,7 +354,8 @@ class DeepST_model(nn.Module):
         q = q.pow((self.alpha + 1.0) / 2.0)
         q = (q.t() / torch.sum(q, 1)).t()
 
-        return z, mu, logvar, de_feat, q, feat_x, gnn_z
+        # return z, mu, logvar, de_feat, q, feat_x, gnn_z
+        return z, mu, logvar, de_feat, q, feat_x, gnn_z, attention_tuple
 
 
 class InnerProductDecoder(nn.Module):
@@ -539,13 +564,13 @@ class AdversarialNetwork(nn.Module):
             
         Returns:
         --------
-        tuple: (z, mu, logvar, de_feat, q, feat_x, gnn_z, domain_pred)
+        tuple: (z, mu, logvar, de_feat, q, feat_x, gnn_z, domain_pred, attention_tuple)
             All outputs from base model plus:
             domain_pred : torch.Tensor
                 Domain classification logits [n_nodes, n_domains]
         """
-        # Get base model outputs
-        z, mu, logvar, de_feat, q, feat_x, gnn_z = self.model(x, edge_index)
+        # Get base model outputs, now including attention_tuple
+        z, mu, logvar, de_feat, q, feat_x, gnn_z, attention_tuple = self.model(x, edge_index)
         
         # Apply gradient reversal
         x_rev = GradientReverseLayer.apply(z, self.weight)
@@ -553,4 +578,4 @@ class AdversarialNetwork(nn.Module):
         # Domain classification
         domain_pred = self.domain_clf(x_rev)
         
-        return z, mu, logvar, de_feat, q, feat_x, gnn_z, domain_pred
+        return z, mu, logvar, de_feat, q, feat_x, gnn_z, domain_pred, attention_tuple
