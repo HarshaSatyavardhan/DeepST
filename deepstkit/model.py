@@ -192,6 +192,7 @@ class DeepST_model(nn.Module):
         """
         feat_x = self.encoder(x)
 
+        print("Running updated code...")
         # Convert SparseTensor to edge_index
         row, col, _ = adj.t().coo()
         edge_index = torch.stack([row, col], dim=0)
