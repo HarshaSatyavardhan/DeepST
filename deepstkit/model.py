@@ -192,17 +192,18 @@ class DeepST_model(nn.Module):
         """
         feat_x = self.encoder(x)
 
+        # Convert SparseTensor to edge_index
+        row, col, _ = adj.t().coo()
+        edge_index = torch.stack([row, col], dim=0)
+
         # Handle attention weights only for GATConv
         if self.Conv_type == 'GATConv':
-            # Convert sparsetensor to edge index for GATconv
-            edge_index, _ = adj.to_edge_index()
             # Manually call layers to capture attention with return_attention_weights parameter
             conv_x, attention_tuple = self.conv1(feat_x, edge_index, return_attention_weights=True)
             conv_x = self.bn1(conv_x)
             conv_x = self.relu1(conv_x)
         else:
             # For non-GAT convolutions, no attention weights
-            edge_index, _ = adj.to_edge_index()
             conv_x = self.conv1(feat_x, edge_index)
             conv_x = self.bn1(conv_x)
             conv_x = self.relu1(conv_x)
