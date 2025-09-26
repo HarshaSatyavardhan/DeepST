@@ -127,3 +127,11 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Ignore data and results folders
+DeepST/Results/
+DeepST/Data/
+
+# Or ignore specific file types
+*.pdf
+*.h5ad
