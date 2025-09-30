@@ -150,9 +150,7 @@ class run():
         neighbour_k: int = 4,
         spatial_k: int = 30,
         n_components: int = 100,
-        md_dist_type: str = "cosine",
         gb_dist_type: str = "correlation",
-        use_morphological: bool = True,
         use_data: str = "raw",
         spatial_type: str = "KDTree"
     ) -> sc.AnnData:
@@ -175,8 +173,6 @@ class run():
             Distance type (default: "cosine")
         gb_dist_type : str
             Distance type (default: "correlation")
-        use_morphological : bool
-            Use morphological features (default: True)
         use_data : str
             Data type to use (default: "raw")
         spatial_type : str
@@ -189,10 +185,8 @@ class run():
         """
         adata = augment_adata(
             adata,
-            md_dist_type=md_dist_type,
             gb_dist_type=gb_dist_type,
             n_components=n_components,
-            use_morphological=use_morphological,
             use_data=use_data,
             neighbour_k=neighbour_k,
             adjacent_weight=adjacent_weight,

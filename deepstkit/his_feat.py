@@ -111,12 +111,12 @@ class image_feature:
         feat_df = pd.DataFrame(features_list, index=spot_names)
         self.adata.obsm["image_feat"] = feat_df.to_numpy()
 
-        pca = PCA(n_components=self.pca_components, random_state=self.seeds)
-        self.adata.obsm["image_feat_pca"] = pca.fit_transform(self.adata.obsm["image_feat"])
+        # pca = PCA(n_components=self.pca_components, random_state=self.seeds)
+        # self.adata.obsm["image_feat_pca"] = pca.fit_transform(self.adata.obsm["image_feat"])
 
-        if self.verbose:
-            print("Image features added to adata.obsm['image_feat']")
-            print("PCA-reduced features added to adata.obsm['image_feat_pca']")
+        # if self.verbose:
+        #     print("Image features added to adata.obsm['image_feat']")
+        #     print("PCA-reduced features added to adata.obsm['image_feat_pca']")
 
         return self.adata
 
