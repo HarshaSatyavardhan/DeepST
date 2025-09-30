@@ -378,6 +378,7 @@ class run():
         self,
         data: np.ndarray,
         graph_dict: dict,
+        image_features: Optional[np.ndarray] = None,
         domains: Optional[np.ndarray] = None,
         n_domains: Optional[int] = None,
         conv_type: str = "GATConv",
@@ -448,6 +449,7 @@ class run():
         if self.task == "Identify_Domain":
             trainer = train(
                 data, graph_dict, model,
+                image_features=image_features,
                 pre_epochs=self.pre_epochs,
                 epochs=self.epochs,
                 kl_weight=kl_weight,
@@ -463,6 +465,7 @@ class run():
             adv_model = AdversarialNetwork(model=model, n_domains=n_domains)
             trainer = train(
                 data, graph_dict, adv_model,
+                image_features=image_features,
                 domains=domains,
                 pre_epochs=self.pre_epochs,
                 epochs=self.epochs,
