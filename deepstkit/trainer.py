@@ -184,11 +184,15 @@ class train():
         """
         self.model.eval()
         if self.domains is None:
-            z, _, _, _, q, _, _ = self.model(self.data, self.adj)
+            z, _, _, _, q, _, _ = self.model(self.data, self.adj, self.image_features)
         else:
-            z, _, _, _, q, _, _, _ = self.model(self.data, self.adj)
-            
-        return z.cpu().numpy(), q.cpu().numpy()
+            z, _, _, _, q, _, _, _ = self.model(self.data, self.adj, self.image_features)
+
+        
+        z_numpy = z.cpu().numpy()
+        q_numpy = q.cpu().numpy()
+        
+        return z_numpy, q_numpy
 
     def save_model(self, save_path: str) -> None:
         """
