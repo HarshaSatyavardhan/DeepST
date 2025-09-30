@@ -555,7 +555,7 @@ class AdversarialNetwork(nn.Module):
         return mse_weight * mse_loss + bce_kld_weight * (bce_loss + KLD)
 
 
-    def forward(self, x: torch.Tensor, edge_index: torch.Tensor) -> tuple:
+    def forward(self, x: torch.Tensor, edge_index: torch.Tensor, image_features: torch.Tensor) -> tuple:
         """
         Forward pass with domain classification
         
@@ -574,7 +574,7 @@ class AdversarialNetwork(nn.Module):
                 Domain classification logits [n_nodes, n_domains]
         """
         # Get base model outputs
-        z, mu, logvar, de_feat, q, feat_x, gnn_z = self.model(x, edge_index)
+        z, mu, logvar, de_feat, q, feat_x, gnn_z = self.model(x, edge_index, image_features)
         
         # Apply gradient reversal
         x_rev = GradientReverseLayer.apply(z, self.weight)
