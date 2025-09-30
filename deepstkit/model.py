@@ -63,6 +63,17 @@ class DeepST_model(nn.Module):
         self.activate = activate
         self.p_drop = p_drop
         self.dec_cluster_n = dec_cluster_n
+        
+        self.attention_embed_dim = self.input_dim # The dimension of the query (gene features)
+        self.num_heads = 4 # A tunable hyperparameter
+        self.cross_attention = nn.MultiheadAttention(
+                                        embed_dim=self.attention_embed_dim,
+                                        kdim=self.input_dim, # Dimension of the key (image features)
+                                        vdim=self.input_dim, # Dimension of the value (image features)
+                                        num_heads=self.num_heads,
+                                        batch_first=False # Our data is (SeqLen, Batch, Features)
+                                    )
+        self.fusion_norm = nn.LayerNorm(self.attention_embed_dim)
 
         # Build encoder network
         current_dim = self.input_dim
@@ -291,7 +302,7 @@ class DeepST_model(nn.Module):
         
         return mse_weight * mse_loss + bce_kld_weight * (bce_loss + KLD)
 
-    def forward(self, x: torch.Tensor, adj: torch.Tensor) -> tuple:
+    def forward(self, x: torch.Tensor, adj: torch.Tensor, image_features: torch.Tensor) -> tuple:
         """
         Forward pass of DeepST model
         
@@ -320,7 +331,25 @@ class DeepST_model(nn.Module):
             gnn_z : torch.Tensor
                 Graph latent features [n_nodes, conv_hidden[-1]]
         """
-        mu, logvar, feat_x = self.encode(x, adj)
+        
+        # 1. reshapes tensors for multihead attention, adding a batch dimentions of 1
+        # shape becomes : (n_spots, 1, 200)
+        
+        query = x.unsqueeze(1)  # gene expression as query
+        key = image_features.unsqueeze(1)  # image features as key
+        value = image_features.unsqueeze(1)  # image features as value
+        
+        # 2. perform cross attention 
+        attention_out, _ = self.cross_attention(query=query, key=key, value=value)
+        
+        # 3. reshapes back to (n_spots, 200) and create fused embeddings
+        attention_out = attention_out.squeeze(1)
+        fused_x = self.fusion_norm(x + attention_out)  # residual connection + layer norm
+        
+        # 4. proceed with the original architecture using the fused data 
+                
+        
+        mu, logvar, feat_x = self.encode(fused_x, adj)
         gnn_z = self.reparameterize(mu, logvar)
         z = torch.cat((feat_x, gnn_z), 1)
         de_feat = self.decoder(z)
