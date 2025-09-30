@@ -23,6 +23,7 @@ class train():
                  processed_data: np.ndarray,
                  graph_dict: dict,
                  model: nn.Module,
+                 image_features: np.ndarray = None,
                  pre_epochs: int = 200,
                  epochs: int = 200,
                  corrupt: float = 0.001,
@@ -78,6 +79,10 @@ class train():
         # Data setup
         self.processed_data = processed_data
         self.data = torch.FloatTensor(processed_data).to(self.device)
+        
+        self.image_features = None
+        if image_features is not None:
+            self.image_features = torch.FloatTensor(image_features).to(self.device)
         self.adj = graph_dict['adj_norm'].to(self.device)
         self.adj_label = graph_dict['adj_label'].to(self.device)
         self.norm = graph_dict['norm_value']
@@ -131,10 +136,10 @@ class train():
                 self.optimizer.zero_grad()
                 
                 if self.domains is None:
-                    z, mu, logvar, de_feat, _, _, _ = self.model(inputs_corr, self.adj)
+                    z, mu, logvar, de_feat, _, _, _ = self.model(inputs_corr, self.adj, self.image_features)
                     preds = self.model.dc(z)
                 else:
-                    z, mu, logvar, de_feat, _, _, _, domain_pred = self.model(inputs_corr, self.adj)
+                    z, mu, logvar, de_feat, _, _, _, domain_pred = self.model(inputs_corr, self.adj, self.image_features)
                     preds = self.model.model.dc(z)
                 
                 # Compute loss
@@ -278,10 +283,10 @@ class train():
         
         # Forward pass
         if self.domains is None:
-            z, mu, logvar, de_feat, out_q, _, _ = self.model(self.data, self.adj)
+            z, mu, logvar, de_feat, out_q, _, _ = self.model(self.data, self.adj, self.image_features)
             preds = self.model.dc(z)
         else:
-            z, mu, logvar, de_feat, out_q, _, _, domain_pred = self.model(self.data, self.adj)
+            z, mu, logvar, de_feat, out_q, _, _, domain_pred = self.model(self.data, self.adj, self.image_features)
             preds = self.model.model.dc(z)
         
         # Compute losses
