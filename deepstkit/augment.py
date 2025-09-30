@@ -106,10 +106,8 @@ def cal_gene_weight(
 
 def cal_weight_matrix(
     adata,
-    md_dist_type="cosine",
     gb_dist_type="correlation",
     n_components=50,
-    use_morphological=True,
     spatial_k=30,
     spatial_type="BallTree",
     verbose=False,
@@ -124,14 +122,11 @@ def cal_weight_matrix(
         - obsm['spatial']: Spatial coordinates
         - X: Gene expression matrix
         - obsm['image_feat_pca']: Morphological features (if use_morphological=True)
-    md_dist_type : str, optional (default="cosine")
-        Distance metric for morphological similarity
+
     gb_dist_type : str, optional (default="correlation")
         Distance metric for gene expression similarity
     n_components : int, optional (default=50)
         Number of PCA components for gene expression
-    use_morphological : bool, optional (default=True)
-        Whether to include morphological similarity
     spatial_k : int, optional (default=30)
         Number of spatial neighbors to consider
     spatial_type : str, optional (default="BallTree")
@@ -187,28 +182,9 @@ def cal_weight_matrix(
     if verbose:
         adata.obsm["gene_correlation"] = gene_correlation
         adata.obsm["physical_distance"] = physical_distance
-    
-    # Calculate and combine morphological weights if needed
-    if use_morphological:
-        morphological_similarity = 1 - pairwise_distances(
-            np.array(adata.obsm["image_feat_pca"]), 
-            metric=md_dist_type
-        )
-        morphological_similarity[morphological_similarity < 0] = 0
-        print("Morphological weights calculated.")
-        
-        if verbose:
-            adata.obsm["morphological_similarity"] = morphological_similarity
-        
-        # Combine all three weights
-        adata.obsm["weights_matrix_all"] = (
-            physical_distance * 
-            gene_correlation * 
-            morphological_similarity
-        )
-    else:
-        # Combine only spatial and gene weights
-        adata.obsm["weights_matrix_all"] = (
+
+    # Combine only spatial and gene weights
+    adata.obsm["weights_matrix_all"] = (
             gene_correlation * 
             physical_distance
         )
@@ -324,10 +300,8 @@ def augment_gene_data(
 
 def augment_adata(
     adata,
-    md_dist_type="cosine",
     gb_dist_type="correlation",
-    n_components=50,
-    use_morphological=True,
+    # n_components=50,
     use_data="raw",
     neighbour_k=4,
     adjacent_weight=0.2,
@@ -341,14 +315,11 @@ def augment_adata(
     -----------
     adata : anndata.AnnData
         Input spatial transcriptomics data
-    md_dist_type : str, optional (default="cosine")
-        Morphological distance metric
+
     gb_dist_type : str, optional (default="correlation")
         Gene expression distance metric
     n_components : int, optional (default=50)
         PCA components for gene expression
-    use_morphological : bool, optional (default=True)
-        Whether to use morphological features
     use_data : str, optional (default="raw")
         Data source for expression
     neighbour_k : int, optional (default=4)
@@ -371,10 +342,8 @@ def augment_adata(
     # Step 1: Calculate combined weight matrix
     adata = cal_weight_matrix(
         adata,
-        md_dist_type=md_dist_type,
         gb_dist_type=gb_dist_type,
-        n_components=n_components,
-        use_morphological=use_morphological,
+        # n_components=n_components,
         spatial_k=spatial_k,
         spatial_type=spatial_type,
     )
