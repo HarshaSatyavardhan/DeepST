@@ -301,7 +301,7 @@ def augment_gene_data(
 def augment_adata(
     adata,
     gb_dist_type="correlation",
-    # n_components=50,
+    n_components=50,
     use_data="raw",
     neighbour_k=4,
     adjacent_weight=0.2,
@@ -343,7 +343,7 @@ def augment_adata(
     adata = cal_weight_matrix(
         adata,
         gb_dist_type=gb_dist_type,
-        # n_components=n_components,
+        n_components=n_components,
         spatial_k=spatial_k,
         spatial_type=spatial_type,
     )
