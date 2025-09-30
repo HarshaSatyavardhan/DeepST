@@ -111,12 +111,13 @@ class image_feature:
         feat_df = pd.DataFrame(features_list, index=spot_names)
         self.adata.obsm["image_feat"] = feat_df.to_numpy()
 
-        # pca = PCA(n_components=self.pca_components, random_state=self.seeds)
-        # self.adata.obsm["image_feat_pca"] = pca.fit_transform(self.adata.obsm["image_feat"])
-
-        # if self.verbose:
-        #     print("Image features added to adata.obsm['image_feat']")
-        #     print("PCA-reduced features added to adata.obsm['image_feat_pca']")
+        # create 200 dimensional PCA embedding for the cross attention model
+        
+        pca_200 = PCA(n_components = 200, random_state=self.seeds)
+        self.adata.obsm["image_pca_200"] = pca_200.fit_transform(self.adata.obsm["image_feat"])
+        
+        if self.verbose:
+            print("PCA reduced for cross attention added to the adata.obsm['image_feat_pca_200']")
 
         return self.adata
 
