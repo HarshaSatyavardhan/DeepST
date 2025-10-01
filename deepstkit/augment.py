@@ -98,7 +98,7 @@ def cal_gene_weight(
     
     # Apply PCA for high-dimensional data
     if data.shape[1] > 500:
-        pca = PCA(n_components=n_components)
+        pca = PCA(n_components=n_components, random_state=0)
         data = pca.fit_transform(data)
     
     return 1 - pairwise_distances(data, metric=gene_dist_type)
