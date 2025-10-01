@@ -72,15 +72,6 @@ class image_feature:
     def extract_image_feat(self):
         transform_list = [
             transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-            transforms.RandomAutocontrast(),
-            transforms.GaussianBlur(kernel_size=(5, 9), sigma=(0.1, 1.)),
-            transforms.RandomInvert(),
-            transforms.RandomAdjustSharpness(random.uniform(0, 1)),
-            transforms.RandomSolarize(random.uniform(0, 1)),
-            transforms.RandomAffine(45, translate=(0.3, 0.3), scale=(0.8, 1.2), 
-                                  shear=(-0.3, 0.3, -0.3, 0.3)),
-            transforms.RandomErasing()
         ]
         img_to_tensor = transforms.Compose(transform_list)
 
