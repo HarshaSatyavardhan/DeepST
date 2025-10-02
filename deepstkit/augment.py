@@ -243,7 +243,7 @@ def find_adjacent_spot(
               bar_format="{l_bar}{bar} [ time left: {remaining} ]") as pbar:
         for i in range(adata.shape[0]):
             # Get top neighbors based on combined weights
-            current_spot = adata.obsm['weights_matrix_all'][i].argsort()[-neighbour_k:][:neighbour_k-1]
+            current_spot = adata.obsm['weights_matrix_all'][i].argsort()[-neighbour_k:]
             spot_weight = adata.obsm['weights_matrix_all'][i][current_spot]
             spot_matrix = gene_matrix[current_spot]
             

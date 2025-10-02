@@ -72,6 +72,8 @@ class image_feature:
     def extract_image_feat(self):
         transform_list = [
             transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+
         ]
         img_to_tensor = transforms.Compose(transform_list)
 
