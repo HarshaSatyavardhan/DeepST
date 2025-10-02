@@ -32,7 +32,7 @@ import torchvision.models as models
 from torch.autograd import Variable 
 import torchvision.transforms as transforms
 
-from equiv_cnn import EquivariantImageEncoder
+from .equiv_cnn import EquivariantImageEncoder
 
 class image_feature:
     def __init__(
