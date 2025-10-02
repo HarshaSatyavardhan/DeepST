@@ -343,7 +343,7 @@ class DeepST_model(nn.Module):
         attention_out, _ = self.cross_attention(query=query, key=key, value=value)
         
         # 3. reshapes back to (n_spots, 200) and create fused embeddings
-        attention_out = attention_out.squeeze(1)
+        attention_out = attention_out.squeeze(0)
         fused_x = self.fusion_norm(x + attention_out)  # residual connection + layer norm
         
         # 4. proceed with the original architecture using the fused data 
