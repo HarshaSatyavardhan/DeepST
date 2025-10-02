@@ -18,7 +18,7 @@ class EquivariantImageEncoder(nn.Module):
 
         # Define the group of rotations we want to be equivariant to.
         # N=8 means we consider rotations by 360/8 = 45 degrees.
-        self.r2_space = gspaces.rot2d_on_r2(N=8)
+        self.r2_space = gspaces.rot2dOnR2(8)
 
         # Define the feature type for the input image.
         # An RGB image has 3 channels, each is a trivial representation (it doesn't change with rotation).
@@ -43,7 +43,7 @@ class EquivariantImageEncoder(nn.Module):
             
             # Group Pooling to produce invariant features
             # This averages the features over the rotation group, making the output invariant.
-            enn.GroupPooling(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 64)),
+            enn.GroupPooling2D(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 64)),
         )
 
         self.spatial_pool = nn.AdaptiveAvgPool2d(1)
