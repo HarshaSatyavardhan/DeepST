@@ -2,8 +2,8 @@
 
 import torch
 import torch.nn as nn
-from e2cnn import gspaces
-from e2cnn import nn as enn
+from escnn import gspaces
+from escnn import nn as enn
 
 class EquivariantImageEncoder(nn.Module):
     def __init__(self, D=256):
@@ -22,19 +22,20 @@ class EquivariantImageEncoder(nn.Module):
 
         # Define the feature type for the input image.
         # An RGB image has 3 channels, each is a trivial representation (it doesn't change with rotation).
-        in_type = enn.FieldType(self.r2_space, [self.r2_space.trivial_repr] * 3)
+        self.in_type = enn.FieldType(self.r2_space, [self.r2_space.trivial_repr] * 3)
 
         # Define the architecture of the CNN.
         # We will use a sequence of equivariant blocks.
-        self.model = nn.Sequential(
+        self.model = enn.SequentialModule(
             # Block 1
-            enn.R2Conv(in_type, enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 16), kernel_size=7, padding=3),
+            enn.R2Conv(self.in_type, enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 16), kernel_size=7, padding=3),
             enn.ReLU(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 16), inplace=True),
             enn.PointwiseMaxPool(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 16), kernel_size=2),
 
             # Block 2
             enn.R2Conv(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 16), enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 32), kernel_size=5, padding=2),
-            enn.ReLU(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 32), inplace=True),enn.PointwiseMaxPool(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 32), kernel_size=2),
+            enn.ReLU(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 32), inplace=True),
+            enn.PointwiseMaxPool(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 32), kernel_size=2),
 
             # Block 3
             enn.R2Conv(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 32), enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 64), kernel_size=5, padding=2),
@@ -42,7 +43,11 @@ class EquivariantImageEncoder(nn.Module):
             
             # Group Pooling to produce invariant features
             # This averages the features over the rotation group, making the output invariant.
-            enn.GroupPooling(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 64)),)
+            enn.GroupPooling(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 64)),
+        )
+
+        self.spatial_pool = nn.AdaptiveAvgPool2d(1)
+        self.flatten = nn.Flatten(start_dim=1)
 
         # Final linear layer to project the invariant features to thedesired dimension D
         # The input to this layer is 64 because the GroupPooling outputs 64 channels of invariant features.
@@ -63,15 +68,18 @@ class EquivariantImageEncoder(nn.Module):
             torch.Tensor: Output tensor of shape [B, D]
         """
         # Wrap the input tensor in a GeometricTensor
-        x_geom = enn.GeometricTensor(x, enn.FieldType(self.r2_space, [self.r2_space.trivial_repr] * 3))
+        x_geom = enn.GeometricTensor(x, self.in_type)
         
         # Pass through the equivariant CNN
         features_equiv = self.model(x_geom)
         
         # Unwrap the GeometricTensor to a standard torch.Tensor for the final MLP
-        features_inv = features_equiv.tensor
+        features_map = features_equiv.tensor
         
+        # Apply spatial pooling and flatten to create a feature vector
+        features_vector = self.flatten(self.spatial_pool(features_map))
+
         # Pass through the final MLP to get the embedding
-        embedding = self.final_mlp(features_inv)
+        embedding = self.final_mlp(features_vector)
         
         return embedding
