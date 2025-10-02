@@ -332,12 +332,12 @@ class DeepST_model(nn.Module):
                 Graph latent features [n_nodes, conv_hidden[-1]]
         """
         
-        # 1. reshapes tensors for multihead attention, adding a batch dimentions of 1
-        # shape becomes : (n_spots, 1, 200)
+        # 1. reshapes tensors for multihead attention, treating spot as a batch
+        # shape becomes : (1, n_spots, 200)
         
-        query = x.unsqueeze(1)  # gene expression as query
-        key = image_features.unsqueeze(1)  # image features as key
-        value = image_features.unsqueeze(1)  # image features as value
+        query = x.unsqueeze(0)  # gene expression as query
+        key = image_features.unsqueeze(0)  # image features as key
+        value = image_features.unsqueeze(0)  # image features as value
         
         # 2. perform cross attention 
         attention_out, _ = self.cross_attention(query=query, key=key, value=value)
