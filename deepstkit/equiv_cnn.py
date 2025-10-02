@@ -28,25 +28,30 @@ class EquivariantImageEncoder(nn.Module):
         # We will use a sequence of equivariant blocks.
         self.model = enn.SequentialModule(
             # Block 1
-            enn.R2Conv(self.in_type, enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 16), kernel_size=7, padding=3),
-            enn.ReLU(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 16), inplace=True),
-            enn.InnerBatchNorm(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 16)), 
-            enn.PointwiseMaxPool2D(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 16), kernel_size=2),
-
-            # Block 2
-            enn.R2Conv(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 16), enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 32), kernel_size=5, padding=2),
+            enn.R2Conv(self.in_type, enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 32), kernel_size=7, padding=3),
             enn.ReLU(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 32), inplace=True),
-            enn.InnerBatchNorm(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 16)), 
+            enn.InnerBatchNorm(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 32)), 
             enn.PointwiseMaxPool2D(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 32), kernel_size=2),
 
-            # Block 3
+            # Block 2
             enn.R2Conv(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 32), enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 64), kernel_size=5, padding=2),
             enn.ReLU(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 64), inplace=True),
-            enn.InnerBatchNorm(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 16)), 
+            enn.InnerBatchNorm(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 64)), 
+            enn.PointwiseMaxPool2D(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 64), kernel_size=2),
+
+            # Block 3: 64 -> 128 channels
+            enn.R2Conv(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 64), enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 128), kernel_size=5, padding=2),
+            enn.ReLU(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 128), inplace=True),
+            enn.InnerBatchNorm(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 128)),
+
+            # Block 4
+            enn.R2Conv(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 128), enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 128), kernel_size=3, padding=1),
+            enn.ReLU(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 128), inplace=True),
+            enn.InnerBatchNorm(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 128)), 
 
             # Group Pooling to produce invariant features
             # This averages the features over the rotation group, making the output invariant.
-            enn.GroupPooling(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 64)),
+            enn.GroupPooling(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 128)),
         )
 
         self.spatial_pool = nn.AdaptiveAvgPool2d(1)
@@ -55,7 +60,7 @@ class EquivariantImageEncoder(nn.Module):
         # Final linear layer to project the invariant features to thedesired dimension D
         # The input to this layer is 64 because the GroupPooling outputs 64 channels of invariant features.
         self.final_mlp = nn.Sequential(
-            nn.Linear(64, 128),
+            nn.Linear(128, 128),
             nn.ReLU(inplace=True),
             nn.Linear(128, D)
         )
