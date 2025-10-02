@@ -32,6 +32,7 @@ import torchvision.models as models
 from torch.autograd import Variable 
 import torchvision.transforms as transforms
 
+from equiv_cnn import EquivariantImageEncoder
 
 class image_feature:
     def __init__(
@@ -51,21 +52,28 @@ class image_feature:
 
     def load_cnn_model(self):
         """Load and return the specified CNN model with appropriate weights."""
+
+        if self.cnnType == 'Equivariant':
+            if EquivariantImageEncoder is None:
+                raise ImportError("e2cnn is not installed.")
+            model = EquivariantImageEncoder(D=256)
+        else:
         # Define model map using weights
-        model_map = {
-            'ResNet50': (models.resnet50, models.ResNet50_Weights.DEFAULT),
-            'Resnet152': (models.resnet152, models.ResNet152_Weights.DEFAULT),
-            'Vgg19': (models.vgg19, models.VGG19_Weights.DEFAULT),
-            'Vgg16': (models.vgg16, models.VGG16_Weights.DEFAULT),
-            'DenseNet121': (models.densenet121, models.DenseNet121_Weights.DEFAULT),
-            'Inception_v3': (models.inception_v3, models.Inception_V3_Weights.DEFAULT)
-        }
+            model_map = {
+                'ResNet50': (models.resnet50, models.ResNet50_Weights.DEFAULT),
+                'Resnet152': (models.resnet152, models.ResNet152_Weights.DEFAULT),
+                'Vgg19': (models.vgg19, models.VGG19_Weights.DEFAULT),
+                'Vgg16': (models.vgg16, models.VGG16_Weights.DEFAULT),
+                'DenseNet121': (models.densenet121, models.DenseNet121_Weights.DEFAULT),
+                'Inception_v3': (models.inception_v3, models.Inception_V3_Weights.DEFAULT)
+            }
 
-        if self.cnnType not in model_map:
-            raise ValueError(f"{self.cnnType} is not a valid CNN type. Options: {list(model_map.keys())}")
+            if self.cnnType not in model_map:
+                raise ValueError(f"{self.cnnType} is not a valid CNN type. Options: {list(model_map.keys())}")
 
-        model_func, weights = model_map[self.cnnType]
-        model = model_func(weights=weights)
+            model_func, weights = model_map[self.cnnType]
+            model = model_func(weights=weights)
+            
         model.to(self.device)
         return model
 
