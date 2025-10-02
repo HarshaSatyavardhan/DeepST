@@ -18,7 +18,7 @@ class EquivariantImageEncoder(nn.Module):
 
         # Define the group of rotations we want to be equivariant to.
         # N=8 means we consider rotations by 360/8 = 45 degrees.
-        self.r2_space = gspaces.Rot2dOnR2(N=8)
+        self.r2_space = gspaces.rot2d_on_r2(N=8)
 
         # Define the feature type for the input image.
         # An RGB image has 3 channels, each is a trivial representation (it doesn't change with rotation).
