@@ -65,7 +65,7 @@ class DeepST_model(nn.Module):
         self.dec_cluster_n = dec_cluster_n
         
         self.attention_embed_dim = self.input_dim # The dimension of the query (gene features)
-        self.num_heads = 8 # A tunable hyperparameter
+        self.num_heads = 4 # A tunable hyperparameter
         self.cross_attention = nn.MultiheadAttention(
                                         embed_dim=self.attention_embed_dim,
                                         kdim=self.input_dim, # Dimension of the key (image features)
