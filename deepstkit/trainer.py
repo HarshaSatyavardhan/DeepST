@@ -342,7 +342,7 @@ class train():
         elif cluster_type == 'Louvain':
             cluster_data = sc.AnnData(z)
             sc.pp.neighbors(cluster_data, n_neighbors=cluster_n)
-            sc.tl.louvain(cluster_data, resolution=resolution)
+            sc.tl.louvain(cluster_data, resolution=resolution, random_state=0)
             y_pred = cluster_data.obs['louvain'].astype(int).to_numpy()
             
             # Calculate cluster centers
