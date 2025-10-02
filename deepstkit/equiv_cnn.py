@@ -30,20 +30,23 @@ class EquivariantImageEncoder(nn.Module):
             # Block 1
             enn.R2Conv(self.in_type, enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 16), kernel_size=7, padding=3),
             enn.ReLU(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 16), inplace=True),
-            enn.PointwiseMaxPool(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 16), kernel_size=2),
+            enn.InnerBatchNorm(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 16)), 
+            enn.PointwiseMaxPool2D(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 16), kernel_size=2),
 
             # Block 2
             enn.R2Conv(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 16), enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 32), kernel_size=5, padding=2),
             enn.ReLU(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 32), inplace=True),
-            enn.PointwiseMaxPool(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 32), kernel_size=2),
+            enn.InnerBatchNorm(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 16)), 
+            enn.PointwiseMaxPool2D(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 32), kernel_size=2),
 
             # Block 3
             enn.R2Conv(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 32), enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 64), kernel_size=5, padding=2),
             enn.ReLU(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 64), inplace=True),
-            
+            enn.InnerBatchNorm(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 16)), 
+
             # Group Pooling to produce invariant features
             # This averages the features over the rotation group, making the output invariant.
-            enn.GroupPooling2D(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 64)),
+            enn.GroupPooling(enn.FieldType(self.r2_space, [self.r2_space.regular_repr] * 64)),
         )
 
         self.spatial_pool = nn.AdaptiveAvgPool2d(1)
