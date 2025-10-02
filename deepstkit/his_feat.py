@@ -106,7 +106,8 @@ class image_feature:
 
         # create 200 dimensional PCA embedding for the cross attention model
         
-        pca_200 = PCA(n_components = 200, random_state=self.seeds)
+        pca_200 = PCA(n_components = 200, random_state=self.seeds, whiten=True)
+        
         self.adata.obsm["image_pca_200"] = pca_200.fit_transform(self.adata.obsm["image_feat"])
         
         if self.verbose:
