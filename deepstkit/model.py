@@ -72,16 +72,26 @@ class DeepST_model(nn.Module):
             nn.Linear(256, input_dim)
         )
 
-        self.attention_embed_dim = self.input_dim # The dimension of the query (gene features)
-        self.num_heads = 4 # A tunable hyperparameter
-        self.cross_attention = nn.MultiheadAttention(
-                                        embed_dim=self.attention_embed_dim,
-                                        kdim=self.input_dim, # Dimension of the key (image features)
-                                        vdim=self.input_dim, # Dimension of the value (image features)
-                                        num_heads=self.num_heads,
-                                        batch_first=False # Our data is (SeqLen, Batch, Features)
-                                    )
-        self.fusion_norm = nn.LayerNorm(self.attention_embed_dim)
+        # self.attention_embed_dim = self.input_dim # The dimension of the query (gene features)
+        # self.num_heads = 4 # A tunable hyperparameter
+        # self.cross_attention = nn.MultiheadAttention(
+        #                                 embed_dim=self.attention_embed_dim,
+        #                                 kdim=self.input_dim, # Dimension of the key (image features)
+        #                                 vdim=self.input_dim, # Dimension of the value (image features)
+        #                                 num_heads=self.num_heads,
+        #                                 batch_first=False # Our data is (SeqLen, Batch, Features)
+        #                             )
+        # self.fusion_norm = nn.LayerNorm(self.attention_embed_dim)
+
+        intermediate_query_dim = self.conv_hidden[0] * 2
+        self.intermediate_cross_attention = nn.MultiheadAttention(
+            embed_dim=intermediate_query_dim,
+            kdim=self.input_dim,
+            vdim=self.input_dim,
+            num_heads=4,
+            batch_first=False
+        )
+        self.intermediate_fusion_norm = nn.LayerNorm(intermediate_query_dim)
 
         # Build encoder network
         current_dim = self.input_dim
@@ -340,26 +350,41 @@ class DeepST_model(nn.Module):
                 Graph latent features [n_nodes, conv_hidden[-1]]
         """
 
+
+        # step 1: project image features 
+        # we get the 200 dim image features
         projected_image_features = self.image_projection_mlp(image_features)
         
-        # 1. reshapes tensors for multihead attention, treating spot as a batch
-        # shape becomes : (1, n_spots, 200)
+        # step 2: process gene/graph data independently
+        feat_x = self.encoder(x)
+        intermediate_gnn_x = self.conv(feat_x, adj)
+
+        # step 3: conditional intermediate fusion
+        # now we introduce the image features
+        # the gene/graph embedding (intermediate_gnn_x) queries the image features
+
         
-        query = x.unsqueeze(0)  # gene expression as query
+        query = intermediate_gnn_x.unsqueeze(0)  # gene expression as query
         key = projected_image_features.unsqueeze(0)  # image features as key
         value = projected_image_features.unsqueeze(0)  # image features as value
         
         # 2. perform cross attention 
-        attention_out, _ = self.cross_attention(query=query, key=key, value=value)
+        attention_out, _ = self.intermediate_cross_attention(query=query, key=key, value=value)
         
+
         # 3. reshapes back to (n_spots, 200) and create fused embeddings
         attention_out = attention_out.squeeze(0)
-        fused_x = self.fusion_norm(x + attention_out)  # residual connection + layer norm
+
+        # the our is a new , refined embedding conditioned on the image information 
+
+        fused_intermediate_x = self.intermediate_fusion_norm(intermediate_gnn_x + attention_out)  # residual connection + layer norm
         
         # 4. proceed with the original architecture using the fused data 
-                
+        #        
         
-        mu, logvar, feat_x = self.encode(fused_x, adj)
+        mu = self.conv_mean(fused_intermediate_x, adj)
+        logvar = self.conv_logvar(fused_intermediate_x, adj)
+
         gnn_z = self.reparameterize(mu, logvar)
         z = torch.cat((feat_x, gnn_z), 1)
         de_feat = self.decoder(z)
