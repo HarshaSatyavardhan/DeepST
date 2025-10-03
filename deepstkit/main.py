@@ -433,10 +433,13 @@ class run():
         """
         print("Running DeepST analysis...")
         start_time = time.time()
+
+        image_feat_dim = image_features.shape[1]
         
         # Initialize model
         model = DeepST_model(
                         input_dim=data.shape[1],
+                        image_feat_dim=image_feat_dim,
                         Conv_type=conv_type,
                         linear_encoder_hidden=linear_encoder_hidden,
                         linear_decoder_hidden=linear_decoder_hidden,

@@ -16,6 +16,7 @@ from typing import Optional
 class DeepST_model(nn.Module):
     def __init__(self, 
                 input_dim: int,
+                image_feat_dim: int,
                 Conv_type: str = 'GATConv',
                 linear_encoder_hidden: list = [32, 20],
                 linear_decoder_hidden: list = [32],
@@ -63,7 +64,14 @@ class DeepST_model(nn.Module):
         self.activate = activate
         self.p_drop = p_drop
         self.dec_cluster_n = dec_cluster_n
-        
+        self.image_feat_dim = image_feat_dim
+
+        self.image_projection_mlp = nn.Sequential(
+            nn.Linear(image_feat_dim, 256),
+            nn.ReLU(),
+            nn.Linear(256, input_dim)
+        )
+
         self.attention_embed_dim = self.input_dim # The dimension of the query (gene features)
         self.num_heads = 4 # A tunable hyperparameter
         self.cross_attention = nn.MultiheadAttention(
@@ -331,13 +339,15 @@ class DeepST_model(nn.Module):
             gnn_z : torch.Tensor
                 Graph latent features [n_nodes, conv_hidden[-1]]
         """
+
+        projected_image_features = self.image_projection_mlp(image_features)
         
         # 1. reshapes tensors for multihead attention, treating spot as a batch
         # shape becomes : (1, n_spots, 200)
         
         query = x.unsqueeze(0)  # gene expression as query
-        key = image_features.unsqueeze(0)  # image features as key
-        value = image_features.unsqueeze(0)  # image features as value
+        key = projected_image_features.unsqueeze(0)  # image features as key
+        value = projected_image_features.unsqueeze(0)  # image features as value
         
         # 2. perform cross attention 
         attention_out, _ = self.cross_attention(query=query, key=key, value=value)
